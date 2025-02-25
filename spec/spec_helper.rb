@@ -11,10 +11,10 @@ require 'rspec'
 require 'tempfile'
 require 'socket'
 require 'stringio'
-require 'ostruct'
 
 module ChildProcessSpecHelper
   RUBY = defined?(Gem) ? Gem.ruby : 'ruby'
+  CapturedOutput = Struct.new(:stdout, :stderr)
 
   def ruby_process(*args)
     @process = ChildProcess.build(RUBY , *args)
@@ -229,7 +229,7 @@ module ChildProcessSpecHelper
 
     yield
 
-    OpenStruct.new stdout: rewind_and_read(out), stderr: rewind_and_read(err)
+    CapturedOutput.new rewind_and_read(out), rewind_and_read(err)
   ensure
     STDOUT.reopen orig_out
     STDERR.reopen orig_err
@@ -252,8 +252,4 @@ RSpec.configure do |c|
   c.after(:each) {
     defined?(@process) && @process.alive? && @process.stop
   }
-
-  if ChildProcess.linux? && ChildProcess.posix_spawn?
-    c.filter_run_excluding :posix_spawn_on_linux => false
-  end
 end

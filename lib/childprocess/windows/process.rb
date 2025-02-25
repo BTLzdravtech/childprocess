@@ -2,9 +2,7 @@ require_relative '../process_spawn_process'
 
 module ChildProcess
   module Windows
-    class Process < PosixSpawnProcess
-      attr_reader :pid
-
+    class Process < ProcessSpawnProcess
       def io
         @io ||= Windows::IO.new
       end

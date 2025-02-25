@@ -16,9 +16,9 @@ module ChildProcess
     def new(*args)
       case os
       when :macosx, :linux, :solaris, :bsd, :cygwin, :aix
-        Unix::Process.new(args)
+        Unix::Process.new(*args)
       when :windows
-        Windows::Process.new(args)
+        Windows::Process.new(*args)
       else
         raise Error, "unsupported platform #{platform_name.inspect}"
       end
@@ -56,6 +56,10 @@ module ChildProcess
 
     def windows?
       os == :windows
+    end
+
+    def posix_spawn_chosen_explicitly?
+      @posix_spawn || %w[1 true].include?(ENV['CHILDPROCESS_POSIX_SPAWN'])
     end
 
     def posix_spawn?

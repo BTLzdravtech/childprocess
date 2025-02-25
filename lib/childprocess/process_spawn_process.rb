@@ -1,7 +1,9 @@
 require_relative 'abstract_process'
 
 module ChildProcess
-  class PosixSpawnProcess < AbstractProcess
+  class ProcessSpawnProcess < AbstractProcess
+    attr_reader :pid
+
     def exited?
       return true if @exit_code
 
@@ -36,6 +38,17 @@ module ChildProcess
     private
 
     def launch_process
+      environment = {}
+      @environment.each_pair do |key, value|
+        key = key.to_s
+        value = value.nil? ? nil : value.to_s
+
+        if key.include?("\0") || key.include?("=") || value.to_s.include?("\0")
+          raise InvalidEnvironmentVariable, "#{key.inspect} => #{value.to_s.inspect}"
+        end
+        environment[key] = value
+      end
+
       options = {}
 
       options[:out] = io.stdout ? io.stdout.fileno : File::NULL
@@ -70,7 +83,7 @@ module ChildProcess
       end
 
       begin
-        @pid = ::Process.spawn(@environment, *args, options)
+        @pid = ::Process.spawn(environment, *args, options)
       rescue SystemCallError => e
         raise LaunchError, e.message
       end
@@ -99,14 +112,15 @@ module ChildProcess
       assert_started
 
       log "sending #{sig}"
-      ::Process.kill sig, _pid
-    end
-
-    def _pid
-      if leader? and ChildProcess.unix?
-        -@pid # negative pid == process group
+      if leader?
+        if ChildProcess.unix?
+          ::Process.kill sig, -@pid # negative pid == process group
+        else
+          output = `taskkill /F /T /PID #{@pid}`
+          log output
+        end
       else
-        @pid
+        ::Process.kill sig, @pid
       end
     end
   end
